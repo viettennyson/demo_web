@@ -3,121 +3,229 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MiMEME</title>
+    <title>Chia sẻ ảnh cùng Lượng IT</title>
     <style>
       body {
-        font-family: sans-serif;
-        max-width: 800px;
-        margin: 2rem auto;
-        padding: 0 1rem;
+        font-family: "Segoe UI", sans-serif;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f4f6f8;
       }
-      .upload-box {
-        border: 2px dashed #ccc;
-        padding: 2rem;
+      .container {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      h2 {
         text-align: center;
-        margin-bottom: 2rem;
+        color: #333;
+        margin-bottom: 30px;
+      }
+
+      .upload-area {
+        border: 2px dashed #007bff;
+        padding: 40px;
+        text-align: center;
         border-radius: 8px;
+        margin-bottom: 30px;
+        background: #f8fbff;
+        transition: 0.3s;
       }
-      .gallery {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 10px;
+      .upload-area:hover {
+        background: #eef5ff;
+        border-color: #0056b3;
       }
-      .gallery img {
-        width: 100%;
-        height: 150px;
-        object-fit: cover;
-        border-radius: 4px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      }
+
       button {
         background: #007bff;
         color: white;
         border: none;
-        padding: 10px 20px;
-        border-radius: 4px;
+        padding: 12px 24px;
+        border-radius: 6px;
         cursor: pointer;
-        margin-top: 10px;
+        font-size: 16px;
+        font-weight: bold;
+        margin-top: 15px;
+        transition: 0.2s;
+      }
+      button:hover {
+        background: #0056b3;
+        transform: translateY(-1px);
       }
       button:disabled {
         background: #ccc;
+        cursor: not-allowed;
+      }
+
+      .gallery {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 30px;
+      }
+      .card {
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s;
+      }
+      .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+      }
+      .card img {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+      }
+      .card-info {
+        padding: 10px;
+        font-size: 12px;
+        color: #666;
+        text-align: center;
       }
     </style>
   </head>
   <body>
-    <h2>MiMEME</h2>
+    <div class="container">
+      <h2>MiMEME</h2>
 
-    <div class="upload-box">
-      <input type="file" id="fileInput" accept="image/*" />
-      <br />
-      <button onclick="uploadImage()" id="btnUpload">Tải lên ngay</button>
-      <p id="status" style="color: gray; margin-top: 10px"></p>
+      <div class="upload-area">
+        <input type="file" id="fileInput" accept="image/*" />
+        <br />
+        <button onclick="handleUpload()" id="btnUpload">
+          Tải ảnh lên ngay
+        </button>
+        <p id="status" style="margin-top: 15px; color: #666">
+          Chọn ảnh và bấm tải lên để chia sẻ với mọi người
+        </p>
+      </div>
+
+      <h3 style="border-bottom: 2px solid #eee; padding-bottom: 10px">
+        Ảnh mọi người đã đăng:
+      </h3>
+      <div class="gallery" id="gallery">
+        <p>Đang tải danh sách ảnh...</p>
+      </div>
     </div>
 
-    <h3>Ảnh đã lưu:</h3>
-    <div class="gallery" id="gallery"></div>
+    <script type="module">
+      // 1. Import thư viện Firebase
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+      import {
+        getFirestore,
+        collection,
+        addDoc,
+        getDocs,
+        query,
+        orderBy,
+        serverTimestamp,
+      } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    <script>
-      // THAY API KEY CỦA BẠN VÀO ĐÂY
-      const API_KEY = "571d30d2c8b11959c48e6a3cac425da7";
+      // ============================================================
+      // ⚠️ CẤU HÌNH CỦA BẠN (ĐIỀN VÀO ĐÂY)
+      // ============================================================
 
-      async function uploadImage() {
+      const IMGBB_API_KEY = "DÁN_KEY_IMGBB_CỦA_BẠN_VÀO_ĐÂY";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyDV3K4aG4QBPYJRFD8ojRQJvIsOcd2UYbo",
+        authDomain: "fir-web-meme.firebaseapp.com",
+        projectId: "fir-web-meme",
+        storageBucket: "fir-web-meme.firebasestorage.app",
+        messagingSenderId: "71664214054",
+        appId: "1:71664214054:web:59d079d78045181ece86e7",
+        measurementId: "G-6YJGNV3FGD",
+      };
+      // ============================================================
+
+      // Khởi tạo Firebase
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+
+      // Biến toàn cục để dùng trong hàm html onclick
+      window.handleUpload = async function () {
         const fileInput = document.getElementById("fileInput");
         const status = document.getElementById("status");
         const btn = document.getElementById("btnUpload");
         const file = fileInput.files[0];
 
         if (!file) {
-          alert("Vui lòng chọn ảnh!");
+          alert("Chưa chọn ảnh!");
           return;
         }
 
-        // Hiệu ứng đang tải
-        status.innerText = "Đang tải lên server ImgBB...";
         btn.disabled = true;
-
-        // Chuẩn bị dữ liệu gửi đi
-        const formData = new FormData();
-        formData.append("image", file);
+        status.innerText = "⏳ Đang upload lên ImgBB...";
 
         try {
-          // Gọi API của ImgBB
-          const response = await fetch(
-            `https://api.imgbb.com/1/upload?key=${API_KEY}`,
-            {
-              method: "POST",
-              body: formData,
-            }
+          // B1: Upload lên ImgBB
+          const formData = new FormData();
+          formData.append("image", file);
+          const res = await fetch(
+            `https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`,
+            { method: "POST", body: formData }
           );
+          const data = await res.json();
 
-          const data = await response.json();
+          if (!data.success) throw new Error("Lỗi ImgBB: " + data.status_txt);
 
-          if (data.success) {
-            status.innerText = "Thành công! Ảnh đã được lưu.";
-            status.style.color = "green";
+          // B2: Lưu link vào Firebase
+          status.innerText = "💾 Đang lưu vào Database chung...";
+          await addDoc(collection(db, "images"), {
+            url: data.data.url,
+            createdAt: serverTimestamp(), // Lưu thời gian tạo
+          });
 
-            // Hiển thị ảnh vừa up
-            displayImage(data.data.url);
-          } else {
-            status.innerText = "Lỗi: " + data.status_txt;
-          }
+          status.innerText = "✅ Thành công!";
+          fileInput.value = "";
+          loadImages(); // Tải lại danh sách ngay lập tức
         } catch (error) {
           console.error(error);
-          status.innerText = "Lỗi kết nối mạng!";
+          status.innerText = "❌ Lỗi: " + error.message;
         } finally {
           btn.disabled = false;
-          fileInput.value = ""; // Reset input
+        }
+      };
+
+      // Hàm tải danh sách ảnh từ Firebase
+      async function loadImages() {
+        const gallery = document.getElementById("gallery");
+        gallery.innerHTML = "<p>Đang cập nhật...</p>";
+
+        try {
+          // Lấy danh sách ảnh, sắp xếp mới nhất lên đầu
+          const q = query(
+            collection(db, "images"),
+            orderBy("createdAt", "desc")
+          );
+          const querySnapshot = await getDocs(q);
+
+          gallery.innerHTML = ""; // Xóa chữ đang tải
+
+          querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            const card = `
+                        <div class="card">
+                            <a href="${data.url}" target="_blank">
+                                <img src="${data.url}" loading="lazy" alt="Ảnh chia sẻ">
+                            </a>
+                        </div>
+                    `;
+            gallery.innerHTML += card;
+          });
+        } catch (error) {
+          console.error(error);
+          gallery.innerHTML =
+            '<p style="color:red">Lỗi tải ảnh (Bạn đã bật "Test Mode" trong Firebase chưa?)</p>';
         }
       }
 
-      function displayImage(url) {
-        const gallery = document.getElementById("gallery");
-        const img = document.createElement("img");
-        img.src = url;
-        // Thêm ảnh mới vào đầu danh sách
-        gallery.prepend(img);
-      }
+      // Tự động tải ảnh khi vào web
+      loadImages();
     </script>
   </body>
 </html>
-
